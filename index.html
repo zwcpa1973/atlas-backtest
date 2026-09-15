@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas Backtest · 美股策略实验室</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css?v=20260902-18" />
+  <link rel="stylesheet" href="./enhancements.css?v=20260902-18" />
+  <link rel="stylesheet" href="./tree.css?v=20260902-18" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">A</span><span>ATLAS</span><span class="brand-sub">BACKTEST</span></div>
+    <nav><button class="nav-active" data-nav="builder">策略工坊</button><button id="libraryNav">策略库</button></nav>
+    <div class="market"><span class="live-dot" id="ibDot"></span><span id="ibStatus">正在连接盈透…</span> <kbd>⌘ K</kbd><button class="avatar">JL</button></div>
+  </header>
+
+  <main id="workspacePage">
+    <section class="commandbar">
+      <div class="left-actions"><button class="primary" id="newBtn">＋ 新建策略</button><button id="saveBtn">⌘ 保存</button><button id="saveAsBtn" title="保留原策略，新增一条策略记录">另存为新策略</button><button id="undoBtn" disabled>↶ 撤销</button><button id="redoBtn" disabled>↷ 重做</button></div>
+      <div class="search">⌕ <input id="nodeSearch" placeholder="搜索节点或代码" /></div>
+      <div class="right-actions"><button id="exportBtn">导出 JSON</button><label class="button">导入<input id="importInput" type="file" accept="application/json" hidden></label></div>
+    </section>
+
+    <section class="strategy-head">
+      <div><div class="eyebrow">当前策略 / STRATEGY</div><input id="strategyName" value="Momentum Fortress" /></div>
+      <div class="status-pill"><span></span> 草稿已保存</div>
+    </section>
+
+    <section class="settings panel">
+      <div class="section-title"><span>01</span> 交易设置 <i></i></div>
+      <div class="settings-grid">
+        <label>初始资金<div class="input-wrap">$ <input id="capital" type="number" value="100000" /></div></label>
+        <label>调仓频率<select id="frequency"><option>每日</option><option selected>每月</option><option>每季度</option></select></label>
+        <label>滑点<div class="input-wrap"><input id="slippage" type="number" value="8" /> bps</div></label>
+        <label>基准<select id="benchmark"><option>SPY</option><option>QQQ</option><option>IWM</option></select></label>
+        <label>时间范围<div class="date-range"><input id="startDate" type="date" value="2019-01-02"><span class="date-connector" aria-hidden="true"></span><input id="endDate" type="date" value="2026-09-01"></div><div class="date-quick"><button data-period="1">近1年</button><button data-period="3">近3年</button><button data-period="5">近5年</button><button data-period="max">全部</button></div></label>
+        <label class="switch-row"><input id="dividends" type="checkbox" checked><span class="switch"></span>股息再投资</label>
+      </div>
+    </section>
+
+    <section class="backtest panel">
+      <div class="section-title"><span>02</span> 回测结果 <i></i><span id="backtestNotice" class="backtest-notice"></span><button class="run" id="runBtn"><b>▶</b> 运行回测</button></div>
+      <div class="tabs" id="tabs"><button class="active" data-tab="return">收益曲线</button><button data-tab="stats">表现统计</button><button data-tab="allocation">持仓历史</button></div>
+      <div id="return" class="tab-pane active">
+        <div class="chart-toolbar"><div class="range" id="chartRange"><button data-months="1">1月</button><button data-months="3">3月</button><button data-months="6">半年</button><button data-months="12">1年</button><button data-months="24">2年</button><button data-months="36">3年</button><button data-months="60">5年</button><button class="active" data-months="0">全部</button></div><div class="legend"><span class="blue"></span>策略组合 <span class="green"></span>基准 <span class="orange"></span>QQQ</div><label><input id="logScale" type="checkbox"> 对数坐标</label></div>
+        <div class="chart-card"><canvas id="chart"></canvas><div class="chart-tip" id="chartTip"></div></div>
+        <div class="navigator"><div class="navigator-preview"><canvas id="navChart"></canvas></div><input id="chartSlider" type="range" min="0" max="100" value="100" disabled><div class="nav-labels"><span id="viewStart">完整区间</span><span>拖动查看历史区间</span><span id="viewEnd">最新</span></div></div>
+        <div class="metrics" id="metrics"></div>
+        <div class="result-summaries">
+          <section><h4>尾部收益</h4><div id="trailingReturns" class="mini-stats"></div></section>
+          <section><h4>交易日统计</h4><div id="tradingDayStats" class="mini-stats"></div></section>
+        </div>
+      </div>
+      <div id="stats" class="tab-pane"><div class="table-wrap"><table><thead><tr><th>年度</th><th>组合收益</th><th>SPY</th><th>超额收益</th><th>最大回撤</th><th>胜率</th></tr></thead><tbody id="statsBody"></tbody></table></div></div>
+      <div id="allocation" class="tab-pane"><div class="allocation-asof" id="allocationAsOf">最新调仓组合</div><div class="alloc-grid" id="allocGrid"></div><div class="history-heading"><h4 class="history-title">逐期持仓权重</h4><button id="exportAllocationBtn" class="ghost">导出 Excel</button></div><div class="allocation-top-scroll" id="allocationTopScroll"><span>左</span><input id="allocationScrollRange" type="range" min="0" max="0" value="0" aria-label="左右拖动查看持仓历史"><span>右</span></div><div class="table-wrap allocation-history" id="allocationHistoryViewport"><table id="allocationHistoryTable"></table></div></div>
+    </section>
+
+    <section class="builder panel">
+      <div class="section-title"><span>03</span> 策略构建器 <i></i><button id="collapseBtn" class="ghost">全部收起</button></div>
+      <div class="builder-toolbar" id="builderModes"><button class="active" data-mode="visual">可视化构建</button><button data-mode="code">代码编辑器</button><div class="tree-zoom"><button id="zoomOut" title="缩小">−</button><output id="zoomValue">100%</output><button id="zoomIn" title="放大">＋</button><button id="zoomReset">100%</button><button id="zoomFit">适应宽度</button></div><div class="ticker-replace"><input id="tickerFind" placeholder="查找股票，如 QQQ" maxlength="12"><button id="tickerFindBtn">查找下一处</button><span>→</span><input id="tickerReplace" placeholder="替换为，如 SPY" maxlength="12"><button id="tickerReplaceBtn">替换选中</button><button id="tickerReplaceAllBtn">全部替换</button><button id="tickerUndoBtn" disabled>撤销替换</button><output id="tickerReplaceStatus"></output></div><span class="builder-hint">Ctrl + 滚轮缩放 · 拖动滚动条浏览</span></div>
+      <div id="visualEditor"><div class="tree-top-scroll" id="treeTopScroll"><div id="treeTopScrollInner"></div></div><div class="tree-viewport" id="treeViewport"><div class="tree-canvas" id="treeCanvas"><div class="tree" id="tree"></div><button class="add-root" id="addRoot">＋ 添加策略模块</button></div></div></div>
+      <div id="codeEditor" class="code-editor" hidden><textarea id="strategyCode" spellcheck="false"></textarea><div><button class="primary" id="applyCode">应用 JSON</button><button class="ghost" id="formatCode">格式化</button></div></div>
+    </section>
+  </main>
+  <main class="library-page" id="libraryModal" hidden>
+    <div class="library-dialog">
+      <div class="library-head"><div><div class="eyebrow">STRATEGY LIBRARY</div><h1>策略库</h1></div><button id="closeLibrary">返回策略工坊</button></div>
+      <div class="library-tools"><input id="librarySearch" placeholder="搜索策略名称"><button id="libraryRefresh">刷新列表</button><button class="primary" id="libraryNew">＋ 新建策略</button></div>
+      <p>保存后自动加入列表；“打开 / 编辑”修改内容后保存更新原策略，“另存为新策略”保留两个版本。</p>
+      <div class="library-list" id="libraryList"><div class="library-empty">正在读取策略库…</div></div>
+    </div>
+  </main>
+  <div class="toast" id="toast"></div>
+  <link rel="stylesheet" href="./builder.css?v=library-page-25">
+  <dialog id="nodeBuilder">
+    <form id="nodeBuilderForm">
+      <header><h2 id="nodeBuilderTitle">添加节点</h2><button type="button" id="closeNodeBuilder" aria-label="关闭">×</button></header>
+      <p id="nodeTarget"></p>
+      <div class="builder-fields">
+        <label>节点类型<select id="nodeKind"><option value="stock">股票 / ETF</option><option value="condition">指标条件 / IF ELSE 分支</option><option value="group" disabled>组合设置（编辑已有组合）</option></select></label>
+        <label id="nodePlacement">添加到哪条分支<select id="nodeLeg"><option value="then">满足条件 / THEN</option><option value="else">否则 / ELSE</option></select></label>
+      </div>
+      <p id="nodeAddNote"></p>
+      <section id="stockFields"><label>股票代码<input id="nodeSymbol" placeholder="例如 SPY、AAPL、BRK-B"></label></section>
+      <label>模块名称（可选）<input id="nodeName" maxlength="160"></label>
+      <section id="conditionFields">
+        <h3>左侧指标</h3><div class="builder-fields">
+          <label>股票代码<input id="lhsSymbol"></label><label>指标<select id="lhsIndicator" class="indicator-options"></select></label>
+          <label>周期（交易日）<input id="lhsWindow" type="number"></label><label>偏移（几日前）<input id="lhsAgo" type="number"></label>
+        </div>
+        <div class="builder-fields"><label>比较关系<select id="compare"><option value="lt">小于 ＜</option><option value="gt">大于 ＞</option></select></label><label>右侧类型<select id="rhsMode"><option value="indicator">另一指标</option><option value="number">固定数值</option></select></label></div>
+        <div id="rhsIndicatorFields" class="builder-fields">
+          <label>股票代码<input id="rhsSymbol"></label><label>指标<select id="rhsIndicator" class="indicator-options"></select></label>
+          <label>周期（交易日）<input id="rhsWindow" type="number"></label><label>偏移（几日前）<input id="rhsAgo" type="number"></label>
+        </div>
+        <div id="rhsNumberFields"><label>固定数值（RSI / 收益率按策略原始单位）<input id="rhsNumber" type="number" step="any"></label></div>
+        <div class="builder-fields"><label>连续满足天数<input id="conditionDays" type="number"></label><label>右侧乘数<input id="rhsWeight" type="number" step="any"></label><label>右侧加值<input id="rhsBias" type="number" step="any"></label></div>
+        <div id="newBranchAssets"><h3>分支初始持仓</h3><p>创建后可在两条分支旁点击＋继续添加股票或嵌套条件。</p><div class="builder-fields"><label>满足条件 / THEN<input id="thenSymbol"></label><label>否则 / ELSE<input id="elseSymbol"></label></div></div>
+      </section>
+      <section id="groupFields"><div class="builder-fields"><label>分配方式<select id="groupType"><option value="Equal">等权</option><option value="Custom">自定义权重</option><option value="InverseVolatility">波动率倒数</option></select></label><label>波动率周期<input id="groupWindow" type="number"></label></div><label>自定义百分比（逗号分隔）<input id="groupWeights"></label><p id="groupWeightHint"></p></section>
+      <p id="nodeBuilderError" role="alert"></p>
+      <footer><span>应用后可撤销；保存后生效到策略库</span><button type="button" id="cancelNodeBuilder">取消</button><button type="submit" class="primary">应用到策略</button></footer>
+    </form>
+  </dialog>
+  <script src="./builder-model.js?v=weights-24"></script>
+  <script src="./builder-ui.js?v=weights-24"></script>
+  <script src="./app.js?v=library-page-25"></script>
+  <script>showAppPage(location.hash==='#library'?'library':'builder',false);if(location.hash==='#library')fetchLibrary();</script>
+  <script>document.querySelectorAll('.indicator-options').forEach(select=>{select.innerHTML=Object.entries({CurrentPrice:'当前价格',MovingAverage:'简单均线 SMA',ExponentialMovingAverage:'指数均线 EMA',RelativeStrengthIndex:'相对强弱 RSI',CumulativeReturn:'累计收益率',MovingAverageOfReturns:'平均收益率',MaxDrawdown:'最大回撤'}).map(([value,label])=>`<option value="${value}">${label}</option>`).join('')});initNodeBuilder();</script>
+</body>
+</html>
