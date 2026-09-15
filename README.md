@@ -115,6 +115,63 @@ python server.py
 
 回测返回：`equity`、`benchmarkEquity`、`metrics`、`annual`、`allocations`、`allocationHistory`、`trades`、`dates`。
 
+## 最小可用策略示例
+
+策略对象由两部分组成：`definition` 是真正参与计算的策略树，`nodes` 只是界面展示用的结构。
+
+下面是一个 60% SPY / 40% BIL、每月再平衡的最小策略（可直接跑通）：
+
+```json
+{
+  "strategy": {
+    "definition": {
+      "incantation_type": "Weighted",
+      "type": "Custom",
+      "weights": [0.6, 0.4],
+      "incantations": [
+        { "incantation_type": "Ticker", "symbol": "SPY" },
+        { "incantation_type": "Ticker", "symbol": "BIL" }
+      ]
+    },
+    "nodes": [
+      {
+        "type": "group", "title": "Demo 60/40", "meta": "Custom · 2项",
+        "children": [
+          { "type": "asset", "title": "SPY · 美股资产", "meta": "60%" },
+          { "type": "asset", "title": "BIL · 美股资产", "meta": "40%" }
+        ]
+      }
+    ]
+  },
+  "settings": {
+    "start": "2024-01-02", "end": "2026-08-28", "benchmark": "SPY",
+    "frequency": "每月", "reinvestDividends": true,
+    "capital": "100000", "slippage": "10"
+  }
+}
+```
+
+```bash
+curl -X POST http://127.0.0.1:8766/api/backtest \
+  -H "Content-Type: application/json" \
+  -d @strategy.json
+```
+
+实测结果：`BIL, QQQ, SPY` 三个标的（QQQ 是默认附加的对比基准），661 个交易日，
+CAGR 14.48%、最大回撤 -11.34%、Sharpe 1.51。
+
+策略树的节点类型：
+
+| 类型 | 说明 |
+| --- | --- |
+| `Ticker` | 单个标的，如 `{"incantation_type":"Ticker","symbol":"SPY"}` |
+| `Weighted` | 加权组合，`type` 可为 `Equal` / `Custom`（配合 `weights`）/ `InverseVolatility` |
+| `Filtered` / `IfElse` | 按条件筛选或分支，配合 `condition`、`then_incantation`、`else_incantation` |
+
+指标类型包括 `CurrentPrice`、`MovingAverage`、`CumulativeReturn`、`Volatility` 等。
+
+> 平时直接在「策略工坊」里可视化搭建即可，不用手写 JSON；上面只是给想用脚本调用的人一个起点。
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
